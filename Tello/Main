@@ -1,0 +1,86 @@
+import time
+import threading
+import cv2
+from djitellopy import Tello
+
+# set drone image parameters
+width = 320  # width of the drone image
+height = 240  # height of the drone image
+# startCounter = 0  # set to 0 if you want flight, 1 if you want the drone not to fly
+#
+
+# Connect to Tello
+
+drone = Tello()
+drone.connect()
+drone.for_back_velocity = 0
+drone.left_right_velocity = 0
+drone.up_down_velocity = 0
+drone.yaw_velocity = 0
+drone.speed = 0
+
+print(drone.get_battery())
+
+drone.streamoff()
+drone.streamon()
+
+start = time.time()
+run = True
+i = 1
+
+
+# run your code
+
+def frames():
+    frame_read = drone.get_frame_read()
+    myFrame = frame_read.frame
+    img = cv2.resize(myFrame, (width, height))
+
+    cv2.imshow("Result", img)
+
+
+def movement():
+    i = 0
+    if i == 0:
+        drone.takeoff()
+        time.sleep(5)
+        if i > 4:
+            drone.land()
+            run = False
+        else:
+            drone.move_forward(20)
+            time.sleep(5)
+            drone.rotate_clockwise(90)
+            i = i + 1
+
+
+t1 = threading.Thread(target=frames())
+
+t1.start()
+
+while True:
+
+    if drone.send_rc_control:
+        drone.send_rc_control(drone.left_right_velocity, drone.for_back_velocity, drone.up_down_velocity,
+                              drone.yaw_velocity)
+    if i == 0:
+        drone.takeoff()
+        time.sleep(10)
+    if i > 4:
+        drone.land()
+        run = False
+    else:
+
+        #drone.move_forward(50)
+        if drone.move_forward(50):
+            print("Drone Moved Forward")
+
+        time.sleep(5)
+        #drone.rotate_clockwise(90)
+        i = i + 1
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        print("LAND")
+        drone.land()
+
+        break
